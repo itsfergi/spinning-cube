@@ -24,8 +24,8 @@ No external linear algebra libraries are used, and the program is self-contained
 1. **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/yourusername/spinning-cube-animation.git
-    cd spinning-cube-animation
+    git clone https://github.com/itsfergi/spinning-cube.git
+    cd spinning-cube
     ```
 
 2. **Compile the Program:**
