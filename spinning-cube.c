@@ -29,6 +29,7 @@ struct convexHull {
 
 void clearScreen() { printf("\033[H\033[J"); }
 
+int color = 31;
 struct vec2 aspectRatio = {1, 1};
 
 // Function to compute cross product of vector AB and AC
@@ -127,8 +128,6 @@ void draw(struct vec2 faces[3][4], char chars[], struct winsize *w) {
         hulls[i] = computeConvexHull(faces[i], 4);
     }
 
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
-
     int x = floor(minBound.x / aspectRatio.x * w->ws_col);
     int y = floor(minBound.y / aspectRatio.y * w->ws_row);
     int size_x = ceil(maxBound.x / aspectRatio.x * w->ws_col);
@@ -150,8 +149,8 @@ void draw(struct vec2 faces[3][4], char chars[], struct winsize *w) {
         y = 0;
     }
 
+    char output[size_y][size_x][7];
     for (int i = y; i < size_y; i++) {
-        printf("\e[?25l\033[%d;%dH", i, x);
         for (int j = x; j < size_x; j++) {
             struct vec2 P = {(double)j * aspectRatio.x / w->ws_col,
                              (double)i * aspectRatio.y / w->ws_row};
@@ -159,13 +158,21 @@ void draw(struct vec2 faces[3][4], char chars[], struct winsize *w) {
             for (c = 0; c < 3; c++) {
                 struct convexHull *ch = hulls[c];
                 if (isInsideConvexHull(P, ch)) {
-                    printf("%c", chars[c]);
+                    sprintf(output[i - y][j - x], "\033[%dm%c", color + c,
+                            chars[c]);
                     break;
+                } else {
+                    sprintf(output[i - y][j - x], " ");
                 }
             }
-            if (c == 3) {
-                printf(" ");
-            }
+        }
+    }
+    printf("\e[?25l\033[1m");
+
+    for (int i = 0; i < (size_y - y); i++) {
+        printf("\033[%d;%dH", i + y, x);
+        for (int j = 0; j < (size_x - x); j++) {
+            printf("%s", output[i][j]);
         }
         printf("\n");
     }
@@ -254,6 +261,9 @@ void updateFaces(struct cube *cube, struct vec2 projections[3][4]) {
     }
 }
 
+// change color variable range from 31 to 35
+void updateColor() { color = (color + 1) % 5 + 31; }
+
 void handleEdgeCollision(struct vec2 faces[3][4], struct vec2 *velocity,
                          struct vec3 *rotational_velocity) {
     struct vec2 minBound;
@@ -263,18 +273,22 @@ void handleEdgeCollision(struct vec2 faces[3][4], struct vec2 *velocity,
     if (minBound.x < 0 && velocity->x < 0) {
         velocity->x = fabs(velocity->x);
         rotational_velocity->y *= -1;
+        updateColor();
     }
     if (maxBound.x > aspectRatio.x && velocity->x > 0) {
         velocity->x = -fabs(velocity->x);
         rotational_velocity->y *= -1;
+        updateColor();
     }
     if (minBound.y < 0 && velocity->y < 0) {
         velocity->y = fabs(velocity->y);
         rotational_velocity->x *= -1;
+        updateColor();
     }
     if (maxBound.y > aspectRatio.y && velocity->y > 0) {
         velocity->y = -fabs(velocity->y);
         rotational_velocity->x *= -1;
+        updateColor();
     }
 }
 
@@ -293,7 +307,7 @@ void updateAspectRatio(struct winsize *w) {
 int main(int argc, char **argv) {
     struct cube cube = {{0.1, 0.2, 0.3}, {0.5, 0.5}, 0.3};
     struct vec2 faces[3][4];
-    char chars[3] = {'#', ':', '.'};
+    char chars[3] = {'#', '*', '~'};
     struct vec2 velocity = {0.01, 0.01};
     struct vec3 rotational_velocity = {0.05, 0.05, 0};
 
